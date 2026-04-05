@@ -46,7 +46,7 @@ pub fn build(b: *std.Build) void {
         .root_module = b.createModule(.{
             .target = target,
             .optimize = optimize,
-            .root_source_file = b.path("src/test.zig"),
+            .root_source_file = b.path("src/test/root.zig"),
             .imports = &.{
                 .{ .name = "libyaml", .module = mod },
             },
