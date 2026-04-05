@@ -13,7 +13,7 @@ pub fn build(b: *std.Build) void {
         .root_source_file = dep.path("include/yaml.h"),
         .target = target,
         .optimize = optimize,
-    }).addModule("libyaml");
+    }).addModule("clibyaml");
 
     mod.addCSourceFiles(.{
         .root = dep.path("src"),
@@ -48,7 +48,7 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
             .root_source_file = b.path("src/test/root.zig"),
             .imports = &.{
-                .{ .name = "libyaml", .module = mod },
+                .{ .name = "clibyaml", .module = mod },
             },
         }),
     });

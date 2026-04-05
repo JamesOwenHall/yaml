@@ -1,6 +1,6 @@
 //! This module runs basic sanity checks against the LibYAML C library to ensure it builds correctly.
 const std = @import("std");
-const libyaml = @import("libyaml");
+const libyaml = @import("clibyaml");
 
 test "get_version_string" {
     const actual = std.mem.span(libyaml.yaml_get_version_string());
