@@ -9,11 +9,11 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    const mod = b.addModule("yaml", .{
+    const mod = b.addTranslateC(.{
+        .root_source_file = dep.path("include/yaml.h"),
         .target = target,
         .optimize = optimize,
-        .root_source_file = b.path("src/c.zig"),
-    });
+    }).addModule("libyaml");
 
     mod.addCSourceFiles(.{
         .root = dep.path("src"),
@@ -43,7 +43,14 @@ pub fn build(b: *std.Build) void {
     mod.addIncludePath(dep.path("include"));
 
     const mod_tests = b.addTest(.{
-        .root_module = mod,
+        .root_module = b.createModule(.{
+            .target = target,
+            .optimize = optimize,
+            .root_source_file = b.path("src/test.zig"),
+            .imports = &.{
+                .{ .name = "libyaml", .module = mod },
+            },
+        }),
     });
 
     const run_mod_tests = b.addRunArtifact(mod_tests);
