@@ -21,7 +21,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    some_module.addImport("libyaml", yaml.module("libyaml"));
+    some_module.addImport("clibyaml", yaml.module("clibyaml"));
 
     // ...
 }
