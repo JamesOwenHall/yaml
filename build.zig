@@ -44,13 +44,13 @@ pub fn build(b: *std.Build) void {
     clibyaml_mod.addConfigHeader(config_header);
     clibyaml_mod.addIncludePath(libyaml_dep.path("include"));
 
-    // === clibyaml test module ===
+    // === clibyaml_test module ===
 
-    const mod_tests = b.addTest(.{
+    const clibyaml_test = b.addTest(.{
         .root_module = b.createModule(.{
             .target = target,
             .optimize = optimize,
-            .root_source_file = b.path("src/test/root.zig"),
+            .root_source_file = b.path("src/clibyaml_test/root.zig"),
             .imports = &.{
                 .{ .name = "clibyaml", .module = clibyaml_mod },
             },
@@ -74,7 +74,7 @@ pub fn build(b: *std.Build) void {
 
     // === Misc ===
 
-    const run_clibyaml_tests = b.addRunArtifact(mod_tests);
+    const run_clibyaml_tests = b.addRunArtifact(clibyaml_test);
     const test_step = b.step("test", "Run tests");
     test_step.dependOn(&run_clibyaml_tests.step);
     test_step.dependOn(&libyaml_tests.step);

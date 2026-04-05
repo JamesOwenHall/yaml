@@ -1,4 +1,4 @@
-//! This module runs basic sanity checks against the LibYAML C library to ensure it builds correctly.
+//! This module runs basic sanity checks against clibyaml to ensure it builds correctly.
 const std = @import("std");
 const libyaml = @import("clibyaml");
 
