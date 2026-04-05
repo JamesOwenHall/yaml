@@ -1,6 +1,9 @@
 # YAML
 
-Zig bindings for [LibYAML](https://github.com/yaml/libyaml).
+This repository contains Zig modules built around [LibYAML](https://github.com/yaml/libyaml).
+
+1. `clibyaml` exposes LibYAML's C API directly as a Zig module.
+2. (WIP) `libyaml` wraps `clibyaml` to leverage Zig idioms and make it generally more ergonomic to use. It otherwise aims to offer an equivalent low-level API.
 
 ## Installation
 
