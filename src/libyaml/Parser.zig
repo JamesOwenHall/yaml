@@ -302,3 +302,27 @@ test "parse DocumentEnd with explicit" {
         }
     }
 }
+
+test "parse Alias" {
+    var parser = try @This().init();
+    defer parser.deinit();
+
+    const input =
+        \\foo: &foo bar
+        \\baz: *foo
+    ;
+    parser.set_input_string(input);
+
+    while (true) {
+        var event = try parser.parse();
+        defer event.deinit();
+
+        switch (event.data) {
+            .Alias => |alias| {
+                try std.testing.expectEqualStrings("foo", alias.anchor);
+            },
+            .None => break,
+            else => {},
+        }
+    }
+}

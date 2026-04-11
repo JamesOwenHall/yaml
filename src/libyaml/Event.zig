@@ -16,6 +16,7 @@ pub fn init(self: *@This()) void {
                 VersionDirective{ .major = self.inner.data.document_start.version_directive.*.major, .minor = self.inner.data.document_start.version_directive.*.minor }
             else
                 null;
+
             break :blk Data{ .DocumentStart = .{
                 .version_directive = version_directive,
                 .tag_directives = TagDirectives{ ._start = self.inner.data.document_start.tag_directives.start, ._end = self.inner.data.document_start.tag_directives.end },
@@ -23,7 +24,9 @@ pub fn init(self: *@This()) void {
             } };
         },
         .DocumentEnd => Data{ .DocumentEnd = .{ .implicit = self.inner.data.document_end.implicit == 1 } },
-        .Alias => Data{ .Alias = {} },
+        .Alias => Data{ .Alias = .{
+            .anchor = std.mem.span(self.inner.data.alias.anchor),
+        } },
         .Scalar => Data{ .Scalar = .{
             .anchor = if (self.inner.data.scalar.anchor != null) std.mem.span(self.inner.data.scalar.anchor) else null,
             .tag = if (self.inner.data.scalar.tag != null) std.mem.span(self.inner.data.scalar.tag) else null,
@@ -61,7 +64,7 @@ pub const Data = union(Type) {
     StreamEnd: void,
     DocumentStart: DocumentStart,
     DocumentEnd: DocumentEnd,
-    Alias: void,
+    Alias: Alias,
     Scalar: Scalar,
     SequenceStart: void,
     SequenceEnd: void,
@@ -81,6 +84,10 @@ pub const DocumentStart = struct {
 
 pub const DocumentEnd = struct {
     implicit: bool,
+};
+
+pub const Alias = struct {
+    anchor: []const u8,
 };
 
 pub const Scalar = struct {
