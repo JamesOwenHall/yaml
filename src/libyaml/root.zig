@@ -1,6 +1,9 @@
 const std = @import("std");
 const clibyaml = @import("clibyaml");
 
+pub const Event = @import("Event.zig");
+pub const Parser = @import("Parser.zig");
+
 pub const Version = struct {
     major: i32,
     minor: i32,
@@ -16,6 +19,10 @@ pub fn get_version() Version {
 
 pub fn get_version_string() []const u8 {
     return std.mem.span(clibyaml.yaml_get_version_string());
+}
+
+test {
+    std.testing.refAllDecls(@This());
 }
 
 test "get_version" {

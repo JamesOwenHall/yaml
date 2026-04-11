@@ -57,6 +57,8 @@ pub fn build(b: *std.Build) void {
         }),
     });
 
+    const run_clibyaml_test = b.addRunArtifact(clibyaml_test);
+
     // === libyaml module ===
 
     const libyaml_mod = b.addModule("libyaml", .{
@@ -68,14 +70,15 @@ pub fn build(b: *std.Build) void {
         },
     });
 
-    const libyaml_tests = b.addTest(.{
+    const libyaml_test = b.addTest(.{
         .root_module = libyaml_mod,
     });
 
+    const run_libyaml_test = b.addRunArtifact(libyaml_test);
+
     // === Misc ===
 
-    const run_clibyaml_tests = b.addRunArtifact(clibyaml_test);
     const test_step = b.step("test", "Run tests");
-    test_step.dependOn(&run_clibyaml_tests.step);
-    test_step.dependOn(&libyaml_tests.step);
+    test_step.dependOn(&run_clibyaml_test.step);
+    test_step.dependOn(&run_libyaml_test.step);
 }
