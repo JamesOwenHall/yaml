@@ -90,11 +90,11 @@ pub const Scalar = struct {
     style: ScalarStyle,
 };
 
-pub const Encoding = enum(i32) {
-    Any = 0,
-    Utf8 = 1,
-    Utf16le = 2,
-    Utf16be = 3,
+pub const Encoding = enum(u32) {
+    Any = clibyaml.YAML_ANY_ENCODING,
+    Utf8 = clibyaml.YAML_UTF8_ENCODING,
+    Utf16le = clibyaml.YAML_UTF16LE_ENCODING,
+    Utf16be = clibyaml.YAML_UTF16BE_ENCODING,
 };
 
 pub const VersionDirective = struct {

@@ -28,6 +28,10 @@ pub fn set_input_string(self: *@This(), str: []const u8) void {
     clibyaml.yaml_parser_set_input_string(&self.inner, str.ptr, str.len);
 }
 
+pub fn set_encoding(self: *@This(), encoding: Event.Encoding) void {
+    self.inner.encoding = @intFromEnum(encoding);
+}
+
 pub fn parse(self: *@This()) ParseError!Event {
     var event: Event = undefined;
     if (clibyaml.yaml_parser_parse(&self.inner, &event.inner) == 0) {
@@ -43,6 +47,8 @@ pub fn parse(self: *@This()) ParseError!Event {
 test "parse StreamStart" {
     var parser = try @This().init();
     defer parser.deinit();
+
+    parser.set_encoding(.Utf8);
 
     const input =
         \\foo: faa
