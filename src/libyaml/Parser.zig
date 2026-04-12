@@ -326,3 +326,115 @@ test "parse Alias" {
         }
     }
 }
+
+// === SequenceStart ===
+
+test "parse SequenceStart anchor" {
+    const gpa = std.testing.allocator;
+    var parser = try @This().init();
+    defer parser.deinit();
+
+    const input =
+        \\foo: &foo
+        \\  - bar
+    ;
+    parser.set_input_string(input);
+
+    var events = try collect_events(gpa, &parser);
+    defer deinit_list(gpa, &events);
+
+    var seqs = try filter_events(gpa, events.items, Event.Type.SequenceStart, Event.SequenceStart);
+    defer seqs.deinit(gpa);
+
+    try std.testing.expectEqual(1, seqs.items.len);
+    try std.testing.expectEqualStrings("foo", seqs.items[0].anchor.?);
+}
+
+test "parse SequenceStart tag" {
+    const gpa = std.testing.allocator;
+    var parser = try @This().init();
+    defer parser.deinit();
+
+    const input =
+        \\foo: !bar []
+    ;
+    parser.set_input_string(input);
+
+    var events = try collect_events(gpa, &parser);
+    defer deinit_list(gpa, &events);
+
+    var seqs = try filter_events(gpa, events.items, Event.Type.SequenceStart, Event.SequenceStart);
+    defer seqs.deinit(gpa);
+
+    try std.testing.expectEqual(1, seqs.items.len);
+    try std.testing.expectEqualStrings("!bar", seqs.items[0].tag.?);
+    // `implicit` just means there's no explicit tag.
+    try std.testing.expect(!seqs.items[0].implicit);
+}
+
+test "parse SequenceStart implicit" {
+    const gpa = std.testing.allocator;
+    var parser = try @This().init();
+    defer parser.deinit();
+
+    const input =
+        \\foo: []
+    ;
+    parser.set_input_string(input);
+
+    var events = try collect_events(gpa, &parser);
+    defer deinit_list(gpa, &events);
+
+    var seqs = try filter_events(gpa, events.items, Event.Type.SequenceStart, Event.SequenceStart);
+    defer seqs.deinit(gpa);
+
+    try std.testing.expectEqual(1, seqs.items.len);
+    try std.testing.expectEqual(null, seqs.items[0].tag);
+    try std.testing.expect(seqs.items[0].implicit);
+}
+
+// === Test helpers ===
+
+fn collect_events(gpa: std.mem.Allocator, parser: *@This()) !std.ArrayList(Event) {
+    var list = std.ArrayList(Event).empty;
+    errdefer {
+        for (list.items) |*event| {
+            event.deinit();
+        }
+    }
+
+    while (true) {
+        const event = try parser.parse();
+        try list.append(gpa, event);
+
+        if (event.data == Event.Type.None) {
+            break;
+        }
+    }
+
+    return list;
+}
+
+fn deinit_list(gpa: std.mem.Allocator, list: *std.ArrayList(Event)) void {
+    for (list.items) |*event| {
+        event.deinit();
+    }
+
+    list.deinit(gpa);
+}
+
+fn filter_events(gpa: std.mem.Allocator, events: []Event, comptime event_type: Event.Type, result: type) !std.ArrayList(result) {
+    var list = std.ArrayList(result).empty;
+    errdefer list.deinit(gpa);
+
+    for (events) |event| {
+        switch (event.data) {
+            event_type => |res| {
+                try list.append(gpa, res);
+            },
+            else => {},
+        }
+    }
+
+    return list;
+}

@@ -33,7 +33,12 @@ pub fn init(self: *@This()) void {
             .value = self.inner.data.scalar.value[0..self.inner.data.scalar.length],
             .style = @enumFromInt(self.inner.data.scalar.style),
         } },
-        .SequenceStart => Data{ .SequenceStart = {} },
+        .SequenceStart => Data{ .SequenceStart = .{
+            .anchor = if (self.inner.data.alias.anchor != null) std.mem.span(self.inner.data.alias.anchor) else null,
+            .tag = if (self.inner.data.sequence_start.tag != null) std.mem.span(self.inner.data.sequence_start.tag) else null,
+            .implicit = self.inner.data.sequence_start.implicit == 1,
+            .style = @enumFromInt(self.inner.data.sequence_start.style),
+        } },
         .SequenceEnd => Data{ .SequenceEnd = {} },
         .MappingStart => Data{ .MappingStart = {} },
         .MappingEnd => Data{ .MappingEnd = {} },
@@ -66,7 +71,7 @@ pub const Data = union(Type) {
     DocumentEnd: DocumentEnd,
     Alias: Alias,
     Scalar: Scalar,
-    SequenceStart: void,
+    SequenceStart: SequenceStart,
     SequenceEnd: void,
     MappingStart: void,
     MappingEnd: void,
@@ -95,6 +100,13 @@ pub const Scalar = struct {
     tag: ?[]const u8,
     value: []const u8,
     style: ScalarStyle,
+};
+
+pub const SequenceStart = struct {
+    anchor: ?[]const u8,
+    tag: ?[]const u8,
+    implicit: bool,
+    style: SequenceStyle,
 };
 
 pub const Encoding = enum(u32) {
@@ -148,4 +160,10 @@ pub const ScalarStyle = enum(i32) {
     DoubleQuoted = clibyaml.YAML_DOUBLE_QUOTED_SCALAR_STYLE,
     Literal = clibyaml.YAML_LITERAL_SCALAR_STYLE,
     Folded = clibyaml.YAML_FOLDED_SCALAR_STYLE,
+};
+
+pub const SequenceStyle = enum(i32) {
+    Any = clibyaml.YAML_ANY_SEQUENCE_STYLE,
+    Block = clibyaml.YAML_BLOCK_SEQUENCE_STYLE,
+    Flow = clibyaml.YAML_FLOW_SEQUENCE_STYLE,
 };
