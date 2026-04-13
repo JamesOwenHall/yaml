@@ -45,33 +45,30 @@ pub fn parse(self: *@This()) ParseError!Event {
 // === StreamStart ===
 
 test "parse StreamStart" {
+    const gpa = std.testing.allocator;
     var parser = try @This().init();
     defer parser.deinit();
-
-    parser.set_encoding(.Utf8);
 
     const input =
         \\foo: faa
     ;
     parser.set_input_string(input);
+    parser.set_encoding(.Utf8);
 
-    while (true) {
-        var event = try parser.parse();
-        defer event.deinit();
+    var events = try collect_events(gpa, &parser);
+    defer deinit_list(gpa, &events);
 
-        switch (event.data) {
-            .StreamStart => |start| {
-                try std.testing.expectEqual(start.encoding, Event.Encoding.Utf8);
-            },
-            .None => break,
-            else => {},
-        }
-    }
+    var starts = try filter_events(gpa, events.items, .StreamStart, Event.StreamStart);
+    defer starts.deinit(gpa);
+
+    try std.testing.expectEqual(1, starts.items.len);
+    try std.testing.expectEqual(Event.Encoding.Utf8, starts.items[0].encoding);
 }
 
 // === DocumentStart ===
 
 test "parse DocumentStart no version directive" {
+    const gpa = std.testing.allocator;
     var parser = try @This().init();
     defer parser.deinit();
 
@@ -80,21 +77,18 @@ test "parse DocumentStart no version directive" {
     ;
     parser.set_input_string(input);
 
-    while (true) {
-        var event = try parser.parse();
-        defer event.deinit();
+    var events = try collect_events(gpa, &parser);
+    defer deinit_list(gpa, &events);
 
-        switch (event.data) {
-            .DocumentStart => |doc| {
-                try std.testing.expectEqual(doc.version_directive, null);
-            },
-            .None => break,
-            else => {},
-        }
-    }
+    var starts = try filter_events(gpa, events.items, .DocumentStart, Event.DocumentStart);
+    defer starts.deinit(gpa);
+
+    try std.testing.expectEqual(1, starts.items.len);
+    try std.testing.expectEqual(null, starts.items[0].version_directive);
 }
 
 test "parse DocumentStart with valid version directive" {
+    const gpa = std.testing.allocator;
     var parser = try @This().init();
     defer parser.deinit();
 
@@ -105,21 +99,17 @@ test "parse DocumentStart with valid version directive" {
     ;
     parser.set_input_string(input);
 
-    while (true) {
-        var event = try parser.parse();
-        defer event.deinit();
+    var events = try collect_events(gpa, &parser);
+    defer deinit_list(gpa, &events);
 
-        switch (event.data) {
-            .DocumentStart => |doc| {
-                try std.testing.expectEqual(doc.version_directive, Event.VersionDirective{
-                    .major = 1,
-                    .minor = 2,
-                });
-            },
-            .None => break,
-            else => {},
-        }
-    }
+    var starts = try filter_events(gpa, events.items, .DocumentStart, Event.DocumentStart);
+    defer starts.deinit(gpa);
+
+    try std.testing.expectEqual(1, starts.items.len);
+    try std.testing.expectEqual(starts.items[0].version_directive, Event.VersionDirective{
+        .major = 1,
+        .minor = 2,
+    });
 }
 
 test "parse DocumentStart with invalid version directive" {
@@ -142,6 +132,7 @@ test "parse DocumentStart with invalid version directive" {
 }
 
 test "parse DocumentStart with no tag directives" {
+    const gpa = std.testing.allocator;
     var parser = try @This().init();
     defer parser.deinit();
 
@@ -151,27 +142,19 @@ test "parse DocumentStart with no tag directives" {
     ;
     parser.set_input_string(input);
 
-    while (true) {
-        var event = try parser.parse();
-        defer event.deinit();
+    var events = try collect_events(gpa, &parser);
+    defer deinit_list(gpa, &events);
 
-        switch (event.data) {
-            .DocumentStart => |doc| {
-                var count: u64 = 0;
-                var iter = doc.tag_directives.iter();
-                while (iter.next()) |_| {
-                    count += 1;
-                }
+    var starts = try filter_events(gpa, events.items, .DocumentStart, Event.DocumentStart);
+    defer starts.deinit(gpa);
 
-                try std.testing.expectEqual(0, count);
-            },
-            .None => break,
-            else => {},
-        }
-    }
+    try std.testing.expectEqual(1, starts.items.len);
+    var iter = starts.items[0].tag_directives.iter();
+    try std.testing.expectEqual(null, iter.next());
 }
 
 test "parse DocumentStart with tag directives" {
+    const gpa = std.testing.allocator;
     var parser = try @This().init();
     defer parser.deinit();
 
@@ -183,31 +166,31 @@ test "parse DocumentStart with tag directives" {
     ;
     parser.set_input_string(input);
 
-    const expected = [_]Event.TagDirective{
+    const expected = &[_]Event.TagDirective{
         .{ .handle = "!", .prefix = "tag:clarkevans.com,2002:" },
         .{ .handle = "!other!", .prefix = "tag:example.org:" },
     };
 
-    while (true) {
-        var event = try parser.parse();
-        defer event.deinit();
+    var events = try collect_events(gpa, &parser);
+    defer deinit_list(gpa, &events);
 
-        switch (event.data) {
-            .DocumentStart => |doc| {
-                var count: u64 = 0;
-                var iter = doc.tag_directives.iter();
-                while (iter.next()) |directive| {
-                    try std.testing.expectEqualDeep(expected[count], directive);
-                    count += 1;
-                }
-            },
-            .None => break,
-            else => {},
-        }
+    var starts = try filter_events(gpa, events.items, .DocumentStart, Event.DocumentStart);
+    defer starts.deinit(gpa);
+
+    try std.testing.expectEqual(1, starts.items.len);
+
+    var iter = starts.items[0].tag_directives.iter();
+    var list = std.ArrayList(Event.TagDirective).empty;
+    defer list.deinit(gpa);
+    while (iter.next()) |directive| {
+        try list.append(gpa, directive);
     }
+
+    try std.testing.expectEqualDeep(expected, list.items);
 }
 
 test "parse DocumentStart with implicit start" {
+    const gpa = std.testing.allocator;
     var parser = try @This().init();
     defer parser.deinit();
 
@@ -216,21 +199,18 @@ test "parse DocumentStart with implicit start" {
     ;
     parser.set_input_string(input);
 
-    while (true) {
-        var event = try parser.parse();
-        defer event.deinit();
+    var events = try collect_events(gpa, &parser);
+    defer deinit_list(gpa, &events);
 
-        switch (event.data) {
-            .DocumentStart => |doc| {
-                try std.testing.expect(doc.implicit);
-            },
-            .None => break,
-            else => {},
-        }
-    }
+    var starts = try filter_events(gpa, events.items, .DocumentStart, Event.DocumentStart);
+    defer starts.deinit(gpa);
+
+    try std.testing.expectEqual(1, starts.items.len);
+    try std.testing.expect(starts.items[0].implicit);
 }
 
 test "parse DocumentStart with explicit start" {
+    const gpa = std.testing.allocator;
     var parser = try @This().init();
     defer parser.deinit();
 
@@ -240,23 +220,20 @@ test "parse DocumentStart with explicit start" {
     ;
     parser.set_input_string(input);
 
-    while (true) {
-        var event = try parser.parse();
-        defer event.deinit();
+    var events = try collect_events(gpa, &parser);
+    defer deinit_list(gpa, &events);
 
-        switch (event.data) {
-            .DocumentStart => |doc| {
-                try std.testing.expect(!doc.implicit);
-            },
-            .None => break,
-            else => {},
-        }
-    }
+    var starts = try filter_events(gpa, events.items, .DocumentStart, Event.DocumentStart);
+    defer starts.deinit(gpa);
+
+    try std.testing.expectEqual(1, starts.items.len);
+    try std.testing.expect(!starts.items[0].implicit);
 }
 
 // === DocumentEnd ===
 
 test "parse DocumentEnd with implicit" {
+    const gpa = std.testing.allocator;
     var parser = try @This().init();
     defer parser.deinit();
 
@@ -265,21 +242,18 @@ test "parse DocumentEnd with implicit" {
     ;
     parser.set_input_string(input);
 
-    while (true) {
-        var event = try parser.parse();
-        defer event.deinit();
+    var events = try collect_events(gpa, &parser);
+    defer deinit_list(gpa, &events);
 
-        switch (event.data) {
-            .DocumentEnd => |doc| {
-                try std.testing.expect(doc.implicit);
-            },
-            .None => break,
-            else => {},
-        }
-    }
+    var ends = try filter_events(gpa, events.items, .DocumentEnd, Event.DocumentEnd);
+    defer ends.deinit(gpa);
+
+    try std.testing.expectEqual(1, ends.items.len);
+    try std.testing.expect(ends.items[0].implicit);
 }
 
 test "parse DocumentEnd with explicit" {
+    const gpa = std.testing.allocator;
     var parser = try @This().init();
     defer parser.deinit();
 
@@ -289,21 +263,18 @@ test "parse DocumentEnd with explicit" {
     ;
     parser.set_input_string(input);
 
-    while (true) {
-        var event = try parser.parse();
-        defer event.deinit();
+    var events = try collect_events(gpa, &parser);
+    defer deinit_list(gpa, &events);
 
-        switch (event.data) {
-            .DocumentEnd => |doc| {
-                try std.testing.expect(!doc.implicit);
-            },
-            .None => break,
-            else => {},
-        }
-    }
+    var ends = try filter_events(gpa, events.items, .DocumentEnd, Event.DocumentEnd);
+    defer ends.deinit(gpa);
+
+    try std.testing.expectEqual(1, ends.items.len);
+    try std.testing.expect(!ends.items[0].implicit);
 }
 
 test "parse Alias" {
+    const gpa = std.testing.allocator;
     var parser = try @This().init();
     defer parser.deinit();
 
@@ -313,18 +284,14 @@ test "parse Alias" {
     ;
     parser.set_input_string(input);
 
-    while (true) {
-        var event = try parser.parse();
-        defer event.deinit();
+    var events = try collect_events(gpa, &parser);
+    defer deinit_list(gpa, &events);
 
-        switch (event.data) {
-            .Alias => |alias| {
-                try std.testing.expectEqualStrings("foo", alias.anchor);
-            },
-            .None => break,
-            else => {},
-        }
-    }
+    var aliases = try filter_events(gpa, events.items, .Alias, Event.Alias);
+    defer aliases.deinit(gpa);
+
+    try std.testing.expectEqual(1, aliases.items.len);
+    try std.testing.expectEqualStrings("foo", aliases.items[0].anchor);
 }
 
 // === SequenceStart ===
@@ -363,7 +330,7 @@ test "parse SequenceStart tag" {
     var events = try collect_events(gpa, &parser);
     defer deinit_list(gpa, &events);
 
-    var seqs = try filter_events(gpa, events.items, Event.Type.SequenceStart, Event.SequenceStart);
+    var seqs = try filter_events(gpa, events.items, .SequenceStart, Event.SequenceStart);
     defer seqs.deinit(gpa);
 
     try std.testing.expectEqual(1, seqs.items.len);
@@ -385,7 +352,7 @@ test "parse SequenceStart implicit" {
     var events = try collect_events(gpa, &parser);
     defer deinit_list(gpa, &events);
 
-    var seqs = try filter_events(gpa, events.items, Event.Type.SequenceStart, Event.SequenceStart);
+    var seqs = try filter_events(gpa, events.items, .SequenceStart, Event.SequenceStart);
     defer seqs.deinit(gpa);
 
     try std.testing.expectEqual(1, seqs.items.len);
@@ -397,11 +364,7 @@ test "parse SequenceStart implicit" {
 
 fn collect_events(gpa: std.mem.Allocator, parser: *@This()) !std.ArrayList(Event) {
     var list = std.ArrayList(Event).empty;
-    errdefer {
-        for (list.items) |*event| {
-            event.deinit();
-        }
-    }
+    errdefer deinit_list(gpa, &list);
 
     while (true) {
         const event = try parser.parse();
