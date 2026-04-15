@@ -41,7 +41,12 @@ pub fn init(self: *Event) void {
             .style = @enumFromInt(self.inner.data.sequence_start.style),
         } },
         .SequenceEnd => Data{ .SequenceEnd = {} },
-        .MappingStart => Data{ .MappingStart = {} },
+        .MappingStart => Data{ .MappingStart = .{
+            .anchor = if (self.inner.data.mapping_start.anchor != null) std.mem.span(self.inner.data.mapping_start.anchor) else null,
+            .tag = if (self.inner.data.mapping_start.tag != null) std.mem.span(self.inner.data.mapping_start.tag) else null,
+            .implicit = self.inner.data.mapping_start.implicit == 1,
+            .style = @enumFromInt(self.inner.data.mapping_start.style),
+        } },
         .MappingEnd => Data{ .MappingEnd = {} },
     };
 }
@@ -50,7 +55,7 @@ pub fn deinit(self: *Event) void {
     clibyaml.yaml_event_delete(&self.inner);
 }
 
-pub const Type = enum(i32) {
+pub const Type = enum(c_int) {
     None = clibyaml.YAML_NO_EVENT,
     StreamStart = clibyaml.YAML_STREAM_START_EVENT,
     StreamEnd = clibyaml.YAML_STREAM_END_EVENT,
@@ -74,7 +79,7 @@ pub const Data = union(Type) {
     Scalar: Scalar,
     SequenceStart: SequenceStart,
     SequenceEnd: void,
-    MappingStart: void,
+    MappingStart: MappingStart,
     MappingEnd: void,
 };
 
@@ -108,6 +113,13 @@ pub const SequenceStart = struct {
     tag: ?[]const u8,
     implicit: bool,
     style: SequenceStyle,
+};
+
+pub const MappingStart = struct {
+    anchor: ?[]const u8,
+    tag: ?[]const u8,
+    implicit: bool,
+    style: MappingStyle,
 };
 
 pub const Encoding = enum(u32) {
@@ -155,7 +167,7 @@ pub const TagDirective = struct {
     prefix: []const u8,
 };
 
-pub const ScalarStyle = enum(i32) {
+pub const ScalarStyle = enum(c_int) {
     Plain = clibyaml.YAML_PLAIN_SCALAR_STYLE,
     SingleQuoted = clibyaml.YAML_SINGLE_QUOTED_SCALAR_STYLE,
     DoubleQuoted = clibyaml.YAML_DOUBLE_QUOTED_SCALAR_STYLE,
@@ -163,8 +175,14 @@ pub const ScalarStyle = enum(i32) {
     Folded = clibyaml.YAML_FOLDED_SCALAR_STYLE,
 };
 
-pub const SequenceStyle = enum(i32) {
+pub const SequenceStyle = enum(c_int) {
     Any = clibyaml.YAML_ANY_SEQUENCE_STYLE,
     Block = clibyaml.YAML_BLOCK_SEQUENCE_STYLE,
     Flow = clibyaml.YAML_FLOW_SEQUENCE_STYLE,
+};
+
+pub const MappingStyle = enum(c_int) {
+    Any = clibyaml.YAML_ANY_MAPPING_STYLE,
+    Block = clibyaml.YAML_BLOCK_MAPPING_STYLE,
+    Flow = clibyaml.YAML_FLOW_MAPPING_STYLE,
 };

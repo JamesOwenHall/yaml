@@ -210,7 +210,7 @@ test "parse SequenceStart" {
     var events = try collect_events(gpa, &parser);
     defer deinit_list(gpa, &events);
 
-    var seqs = try filter_events(gpa, events.items, Event.Type.SequenceStart, Event.SequenceStart);
+    var seqs = try filter_events(gpa, events.items, .SequenceStart, Event.SequenceStart);
     defer seqs.deinit(gpa);
 
     const expected: []const Event.SequenceStart = &.{
@@ -219,6 +219,33 @@ test "parse SequenceStart" {
     };
 
     try std.testing.expectEqualDeep(expected, seqs.items);
+}
+
+test "parse MappingStart" {
+    const gpa = std.testing.allocator;
+    var parser = try Parser.init();
+    defer parser.deinit();
+
+    const input =
+        \\- foo: faa
+        \\- &faa {foo: bar}
+        \\- !faa {foo: bar}
+    ;
+    parser.set_input_string(input);
+
+    var events = try collect_events(gpa, &parser);
+    defer deinit_list(gpa, &events);
+
+    var starts = try filter_events(gpa, events.items, .MappingStart, Event.MappingStart);
+    defer starts.deinit(gpa);
+
+    const expected: []const Event.MappingStart = &.{
+        .{ .anchor = null, .tag = null, .implicit = true, .style = .Block },
+        .{ .anchor = "faa", .tag = null, .implicit = true, .style = .Flow },
+        .{ .anchor = null, .tag = "!faa", .implicit = false, .style = .Flow },
+    };
+
+    try std.testing.expectEqualDeep(expected, starts.items);
 }
 
 // === Test helpers ===
