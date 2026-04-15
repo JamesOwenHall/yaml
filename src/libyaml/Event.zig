@@ -1,11 +1,12 @@
 const std = @import("std");
 const clibyaml = @import("clibyaml");
+const Event = @This();
 
 inner: clibyaml.yaml_event_t,
 type: Type,
 data: Data,
 
-pub fn init(self: *@This()) void {
+pub fn init(self: *Event) void {
     self.type = @enumFromInt(self.inner.type);
     self.data = switch (self.type) {
         .None => Data{ .None = {} },
@@ -45,7 +46,7 @@ pub fn init(self: *@This()) void {
     };
 }
 
-pub fn deinit(self: *@This()) void {
+pub fn deinit(self: *Event) void {
     clibyaml.yaml_event_delete(&self.inner);
 }
 
