@@ -3,12 +3,11 @@ const clibyaml = @import("clibyaml");
 const Event = @This();
 
 inner: clibyaml.yaml_event_t,
-type: Type,
 data: Data,
 
 pub fn init(self: *Event) void {
-    self.type = @enumFromInt(self.inner.type);
-    self.data = switch (self.type) {
+    const event_type: Type = @enumFromInt(self.inner.type);
+    self.data = switch (event_type) {
         .None => Data{ .None = {} },
         .StreamStart => Data{ .StreamStart = .{ .encoding = @enumFromInt(self.inner.data.stream_start.encoding) } },
         .StreamEnd => Data{ .StreamEnd = {} },
