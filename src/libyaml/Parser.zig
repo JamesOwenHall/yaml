@@ -97,7 +97,7 @@ test "parse DocumentStart" {
     // Doc 1
     const exp_1 = Event.DocumentStart{
         .version_directive = null,
-        .tag_directives = .{ ._start = null, ._end = null },
+        .tag_directives = .{ .start = null, .end = null },
         .implicit = true,
     };
     try std.testing.expectEqualDeep(exp_1, starts.items[0]);

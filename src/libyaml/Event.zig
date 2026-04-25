@@ -19,7 +19,7 @@ pub fn init(self: *Event) void {
 
             break :blk Data{ .DocumentStart = .{
                 .version_directive = version_directive,
-                .tag_directives = TagDirectives{ ._start = self.inner.data.document_start.tag_directives.start, ._end = self.inner.data.document_start.tag_directives.end },
+                .tag_directives = TagDirectives{ .start = self.inner.data.document_start.tag_directives.start, .end = self.inner.data.document_start.tag_directives.end },
                 .implicit = self.inner.data.document_start.implicit == 1,
             } };
         },
@@ -134,8 +134,8 @@ pub const VersionDirective = struct {
 };
 
 pub const TagDirectives = struct {
-    _start: [*c]clibyaml.yaml_tag_directive_t,
-    _end: [*c]clibyaml.yaml_tag_directive_t,
+    start: [*c]clibyaml.yaml_tag_directive_t,
+    end: [*c]clibyaml.yaml_tag_directive_t,
 
     pub const Iterator = struct {
         current: [*c]clibyaml.yaml_tag_directive_t,
@@ -157,7 +157,7 @@ pub const TagDirectives = struct {
     };
 
     pub fn iter(self: @This()) Iterator {
-        return .{ .current = self._start, .end = self._end };
+        return .{ .current = self.start, .end = self.end };
     }
 };
 
