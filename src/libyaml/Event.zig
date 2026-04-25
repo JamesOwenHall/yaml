@@ -12,8 +12,8 @@ pub fn init(self: *Event) void {
         .StreamStart => Data{ .StreamStart = .{ .encoding = @enumFromInt(self.inner.data.stream_start.encoding) } },
         .StreamEnd => Data{ .StreamEnd = {} },
         .DocumentStart => blk: {
-            const version_directive = if (self.inner.data.document_start.version_directive != null)
-                VersionDirective{ .major = self.inner.data.document_start.version_directive.*.major, .minor = self.inner.data.document_start.version_directive.*.minor }
+            const version_directive = if (self.inner.data.document_start.version_directive) |version_directive|
+                VersionDirective{ .major = version_directive.*.major, .minor = version_directive.*.minor }
             else
                 null;
 
@@ -28,21 +28,21 @@ pub fn init(self: *Event) void {
             .anchor = std.mem.span(self.inner.data.alias.anchor),
         } },
         .Scalar => Data{ .Scalar = .{
-            .anchor = if (self.inner.data.scalar.anchor != null) std.mem.span(self.inner.data.scalar.anchor) else null,
-            .tag = if (self.inner.data.scalar.tag != null) std.mem.span(self.inner.data.scalar.tag) else null,
+            .anchor = if (self.inner.data.scalar.anchor) |anchor| std.mem.span(anchor) else null,
+            .tag = if (self.inner.data.scalar.tag) |tag| std.mem.span(tag) else null,
             .value = self.inner.data.scalar.value[0..self.inner.data.scalar.length],
             .style = @enumFromInt(self.inner.data.scalar.style),
         } },
         .SequenceStart => Data{ .SequenceStart = .{
-            .anchor = if (self.inner.data.alias.anchor != null) std.mem.span(self.inner.data.alias.anchor) else null,
-            .tag = if (self.inner.data.sequence_start.tag != null) std.mem.span(self.inner.data.sequence_start.tag) else null,
+            .anchor = if (self.inner.data.alias.anchor) |anchor| std.mem.span(anchor) else null,
+            .tag = if (self.inner.data.sequence_start.tag) |tag| std.mem.span(tag) else null,
             .implicit = self.inner.data.sequence_start.implicit == 1,
             .style = @enumFromInt(self.inner.data.sequence_start.style),
         } },
         .SequenceEnd => Data{ .SequenceEnd = {} },
         .MappingStart => Data{ .MappingStart = .{
-            .anchor = if (self.inner.data.mapping_start.anchor != null) std.mem.span(self.inner.data.mapping_start.anchor) else null,
-            .tag = if (self.inner.data.mapping_start.tag != null) std.mem.span(self.inner.data.mapping_start.tag) else null,
+            .anchor = if (self.inner.data.mapping_start.anchor) |anchor| std.mem.span(anchor) else null,
+            .tag = if (self.inner.data.mapping_start.tag) |tag| std.mem.span(tag) else null,
             .implicit = self.inner.data.mapping_start.implicit == 1,
             .style = @enumFromInt(self.inner.data.mapping_start.style),
         } },
@@ -150,8 +150,8 @@ pub const TagDirectives = struct {
             self.current += 1;
 
             return .{
-                .handle = if (item.handle != null) std.mem.span(item.handle) else &.{},
-                .prefix = if (item.prefix != null) std.mem.span(item.prefix) else &.{},
+                .handle = if (item.handle) |handle| std.mem.span(handle) else &.{},
+                .prefix = if (item.prefix) |prefix| std.mem.span(prefix) else &.{},
             };
         }
     };
