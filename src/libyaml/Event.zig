@@ -5,49 +5,51 @@ const Event = @This();
 inner: clibyaml.yaml_event_t,
 data: Data,
 
-pub fn init(self: *Event) void {
-    const event_type: Type = @enumFromInt(self.inner.type);
-    self.data = switch (event_type) {
+pub fn init(raw: clibyaml.yaml_event_t) Event {
+    const event_type: Type = @enumFromInt(raw.type);
+    const data = switch (event_type) {
         .None => Data{ .None = {} },
-        .StreamStart => Data{ .StreamStart = .{ .encoding = @enumFromInt(self.inner.data.stream_start.encoding) } },
+        .StreamStart => Data{ .StreamStart = .{ .encoding = @enumFromInt(raw.data.stream_start.encoding) } },
         .StreamEnd => Data{ .StreamEnd = {} },
         .DocumentStart => blk: {
-            const version_directive = if (self.inner.data.document_start.version_directive) |version_directive|
+            const version_directive = if (raw.data.document_start.version_directive) |version_directive|
                 VersionDirective{ .major = version_directive.*.major, .minor = version_directive.*.minor }
             else
                 null;
 
             break :blk Data{ .DocumentStart = .{
                 .version_directive = version_directive,
-                .tag_directives = TagDirectives{ .start = self.inner.data.document_start.tag_directives.start, .end = self.inner.data.document_start.tag_directives.end },
-                .implicit = self.inner.data.document_start.implicit == 1,
+                .tag_directives = TagDirectives{ .start = raw.data.document_start.tag_directives.start, .end = raw.data.document_start.tag_directives.end },
+                .implicit = raw.data.document_start.implicit == 1,
             } };
         },
-        .DocumentEnd => Data{ .DocumentEnd = .{ .implicit = self.inner.data.document_end.implicit == 1 } },
+        .DocumentEnd => Data{ .DocumentEnd = .{ .implicit = raw.data.document_end.implicit == 1 } },
         .Alias => Data{ .Alias = .{
-            .anchor = std.mem.span(self.inner.data.alias.anchor),
+            .anchor = std.mem.span(raw.data.alias.anchor),
         } },
         .Scalar => Data{ .Scalar = .{
-            .anchor = if (self.inner.data.scalar.anchor) |anchor| std.mem.span(anchor) else null,
-            .tag = if (self.inner.data.scalar.tag) |tag| std.mem.span(tag) else null,
-            .value = self.inner.data.scalar.value[0..self.inner.data.scalar.length],
-            .style = @enumFromInt(self.inner.data.scalar.style),
+            .anchor = if (raw.data.scalar.anchor) |anchor| std.mem.span(anchor) else null,
+            .tag = if (raw.data.scalar.tag) |tag| std.mem.span(tag) else null,
+            .value = raw.data.scalar.value[0..raw.data.scalar.length],
+            .style = @enumFromInt(raw.data.scalar.style),
         } },
         .SequenceStart => Data{ .SequenceStart = .{
-            .anchor = if (self.inner.data.alias.anchor) |anchor| std.mem.span(anchor) else null,
-            .tag = if (self.inner.data.sequence_start.tag) |tag| std.mem.span(tag) else null,
-            .implicit = self.inner.data.sequence_start.implicit == 1,
-            .style = @enumFromInt(self.inner.data.sequence_start.style),
+            .anchor = if (raw.data.alias.anchor) |anchor| std.mem.span(anchor) else null,
+            .tag = if (raw.data.sequence_start.tag) |tag| std.mem.span(tag) else null,
+            .implicit = raw.data.sequence_start.implicit == 1,
+            .style = @enumFromInt(raw.data.sequence_start.style),
         } },
         .SequenceEnd => Data{ .SequenceEnd = {} },
         .MappingStart => Data{ .MappingStart = .{
-            .anchor = if (self.inner.data.mapping_start.anchor) |anchor| std.mem.span(anchor) else null,
-            .tag = if (self.inner.data.mapping_start.tag) |tag| std.mem.span(tag) else null,
-            .implicit = self.inner.data.mapping_start.implicit == 1,
-            .style = @enumFromInt(self.inner.data.mapping_start.style),
+            .anchor = if (raw.data.mapping_start.anchor) |anchor| std.mem.span(anchor) else null,
+            .tag = if (raw.data.mapping_start.tag) |tag| std.mem.span(tag) else null,
+            .implicit = raw.data.mapping_start.implicit == 1,
+            .style = @enumFromInt(raw.data.mapping_start.style),
         } },
         .MappingEnd => Data{ .MappingEnd = {} },
     };
+
+    return .{ .inner = raw, .data = data };
 }
 
 pub fn deinit(self: *Event) void {

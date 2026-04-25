@@ -34,13 +34,12 @@ pub fn set_encoding(self: *Parser, encoding: Event.Encoding) void {
 }
 
 pub fn parse(self: *Parser) ParseError!Event {
-    var event: Event = undefined;
-    if (clibyaml.yaml_parser_parse(&self.inner, &event.inner) == 0) {
+    var raw: clibyaml.yaml_event_t = undefined;
+    if (clibyaml.yaml_parser_parse(&self.inner, &raw) == 0) {
         return ParseError.ParseError;
     }
 
-    event.init();
-    return event;
+    return Event.init(raw);
 }
 
 test "parse StreamStart" {
