@@ -76,9 +76,27 @@ pub fn build(b: *std.Build) void {
 
     const run_libyaml_test = b.addRunArtifact(libyaml_test);
 
+    // === YAML module ===
+
+    const yaml_mod = b.addModule("yaml", .{
+        .root_source_file = b.path("src/yaml/root.zig"),
+        .target = target,
+        .optimize = optimize,
+        .imports = &.{
+            .{ .name = "clibyaml", .module = clibyaml_mod },
+        },
+    });
+
+    const yaml_test = b.addTest(.{
+        .root_module = yaml_mod,
+    });
+
+    const run_yaml_test = b.addRunArtifact(yaml_test);
+
     // === Misc ===
 
     const test_step = b.step("test", "Run tests");
     test_step.dependOn(&run_clibyaml_test.step);
     test_step.dependOn(&run_libyaml_test.step);
+    test_step.dependOn(&run_yaml_test.step);
 }
