@@ -264,3 +264,31 @@ test "parse mappings" {
     const ctx: Value.Context = .{};
     try std.testing.expect(ctx.eql(expected, actual));
 }
+
+test "parse complex keys" {
+    const gpa = std.testing.allocator;
+    const input =
+        \\---
+        \\? [foo]
+        \\: bar
+        \\...
+    ;
+    var schema: Self = try .init();
+    defer schema.deinit();
+    schema.set_input_string(input);
+
+    var actual = try schema.parse(gpa);
+    defer actual.deinit(gpa);
+
+    var key = std.ArrayList(Value).empty;
+    try key.append(gpa, Value{ .string = try gpa.dupe(u8, "foo") });
+
+    var map = std.HashMap(Value, Value, Value.Context, Value.mapping_load_factor).init(gpa);
+    try map.put(Value{ .sequence = key }, Value{ .string = try gpa.dupe(u8, "bar") });
+
+    var expected = Value{ .mapping = map };
+    defer expected.deinit(gpa);
+
+    const ctx: Value.Context = .{};
+    try std.testing.expect(ctx.eql(expected, actual));
+}
