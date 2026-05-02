@@ -3,7 +3,7 @@
 This repository contains Zig modules built around [LibYAML](https://github.com/yaml/libyaml).
 
 1. `clibyaml` exposes LibYAML's C API directly as a Zig module.
-2. (WIP) `libyaml` wraps `clibyaml` to leverage Zig idioms and make it generally more ergonomic to use. It otherwise aims to offer an equivalent low-level API.
+2. `yaml` implements a YAML parser in Zig based on LibYAML.
 
 ## Installation
 
@@ -24,7 +24,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    some_module.addImport("clibyaml", yaml.module("clibyaml"));
+    some_module.addImport("yaml", yaml.module("yaml"));
 
     // ...
 }
