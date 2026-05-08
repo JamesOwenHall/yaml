@@ -20,17 +20,54 @@ pub fn set_input_string(self: *Self, input: []const u8) void {
     self.iter.set_input_string(input);
 }
 
-pub fn parse(self: *Self, gpa: std.mem.Allocator) Error!Value {
+pub fn parse_stream(self: *Self, gpa: std.mem.Allocator) Error!std.ArrayList(Value) {
+    var list: std.ArrayList(Value) = .empty;
+    errdefer {
+        for (list.items) |*item| {
+            item.deinit(gpa);
+        }
+
+        list.deinit(gpa);
+    }
+
+    var next = try self.iter.peek() orelse return Error.ParseError;
+    if (next.type != clibyaml.YAML_STREAM_START_EVENT) {
+        return Error.ParseError;
+    }
+
+    try self.iter.skip();
+    next = try self.iter.peek() orelse return Error.ParseError;
+
+    while (next.type != clibyaml.YAML_STREAM_END_EVENT) : (next = try self.iter.peek() orelse return Error.ParseError) {
+        try list.append(gpa, try self.parse_document(gpa));
+    }
+
+    return list;
+}
+
+pub fn parse_document(self: *Self, gpa: std.mem.Allocator) Error!Value {
     var next = try self.iter.peek() orelse return Error.ParseError;
     if (next.type == clibyaml.YAML_STREAM_START_EVENT) {
         try self.iter.skip();
         next = try self.iter.peek() orelse return Error.ParseError;
     }
-    if (next.type == clibyaml.YAML_DOCUMENT_START_EVENT) {
-        try self.iter.skip();
+
+    if (next.type != clibyaml.YAML_DOCUMENT_START_EVENT) {
+        return Error.ParseError;
     }
 
-    return self.parse_value(gpa);
+    try self.iter.skip();
+
+    var val = try self.parse_value(gpa);
+    errdefer val.deinit(gpa);
+
+    next = try self.iter.peek() orelse return Error.ParseError;
+    if (next.type != clibyaml.YAML_DOCUMENT_END_EVENT) {
+        return Error.ParseError;
+    }
+
+    try self.iter.skip();
+    return val;
 }
 
 fn parse_value(self: *Self, gpa: std.mem.Allocator) Error!Value {
@@ -89,6 +126,40 @@ fn parse_value(self: *Self, gpa: std.mem.Allocator) Error!Value {
     };
 }
 
+test "parse stream" {
+    const gpa = std.testing.allocator;
+    const input =
+        \\foo
+        \\---
+        \\bar
+    ;
+
+    var schema: Self = try .init();
+    defer schema.deinit();
+    schema.set_input_string(input);
+
+    var actual = try schema.parse_stream(gpa);
+    defer {
+        for (actual.items) |*item| {
+            item.deinit(gpa);
+        }
+        actual.deinit(gpa);
+    }
+
+    var expected: std.ArrayList(Value) = .empty;
+    defer {
+        for (expected.items) |*item| {
+            item.deinit(gpa);
+        }
+        expected.deinit(gpa);
+    }
+
+    try expected.append(gpa, try Value.allocString(gpa, "foo"));
+    try expected.append(gpa, try Value.allocString(gpa, "bar"));
+
+    try std.testing.expectEqualDeep(expected.items, actual.items);
+}
+
 test "parse scalar" {
     const gpa = std.testing.allocator;
     const input =
@@ -98,7 +169,7 @@ test "parse scalar" {
     defer schema.deinit();
     schema.set_input_string(input);
 
-    var actual = try schema.parse(gpa);
+    var actual = try schema.parse_document(gpa);
     defer actual.deinit(gpa);
 
     var expected: Value = try .allocString(gpa, "foo");
@@ -118,7 +189,7 @@ test "parse sequences" {
     defer schema.deinit();
     schema.set_input_string(input);
 
-    var actual = try schema.parse(gpa);
+    var actual = try schema.parse_document(gpa);
     defer actual.deinit(gpa);
 
     var expected: Value = try .allocSequence(gpa, &.{
@@ -144,7 +215,7 @@ test "parse mappings" {
     defer schema.deinit();
     schema.set_input_string(input);
 
-    var actual = try schema.parse(gpa);
+    var actual = try schema.parse_document(gpa);
     defer actual.deinit(gpa);
 
     var expected: Value = try .allocMapping(gpa, &.{
@@ -167,7 +238,7 @@ test "parse complex keys" {
     defer schema.deinit();
     schema.set_input_string(input);
 
-    var actual = try schema.parse(gpa);
+    var actual = try schema.parse_document(gpa);
     defer actual.deinit(gpa);
 
     var expected: Value = try .allocMapping(gpa, &.{

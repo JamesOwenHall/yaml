@@ -46,7 +46,6 @@ pub fn peek(self: *Self) Error!?clibyaml.yaml_event_t {
 
     var event: clibyaml.yaml_event_t = undefined;
     if (clibyaml.yaml_parser_parse(&self.inner, &event) == 0) {
-        std.debug.print("Problem: {s}\n", .{self.inner.problem});
         return Error.ParseError;
     }
     self.peek_event = event;
