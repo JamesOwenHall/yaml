@@ -2,8 +2,9 @@
 //! prevents the use of AutoHashMap.
 const std = @import("std");
 const Value = @import("value.zig").Value;
+const Context = @This();
 
-pub fn hash(self: @This(), key: Value) u64 {
+pub fn hash(self: Context, key: Value) u64 {
     var hasher = std.hash.Wyhash.init(0);
     hasher.update(&.{@as(u8, @intFromEnum(key))});
 
@@ -29,7 +30,7 @@ pub fn hash(self: @This(), key: Value) u64 {
     return hasher.final();
 }
 
-pub fn eql(self: @This(), key1: Value, key2: Value) bool {
+pub fn eql(self: Context, key1: Value, key2: Value) bool {
     switch (key1) {
         .string => |s1| switch (key2) {
             .string => |s2| return std.mem.eql(u8, s1, s2),
@@ -73,4 +74,74 @@ pub fn eql(self: @This(), key1: Value, key2: Value) bool {
     }
 
     return true;
+}
+
+test "context with strings" {
+    const gpa = std.testing.allocator;
+
+    var v1: Value = try .allocString(gpa, "foo");
+    defer v1.deinit(gpa);
+    var v2: Value = try .allocString(gpa, "foo");
+    defer v2.deinit(gpa);
+    var v3: Value = try .allocString(gpa, "bar");
+    defer v3.deinit(gpa);
+
+    const ctx: Context = .{};
+    try std.testing.expectEqual(ctx.hash(v1), ctx.hash(v2));
+    try std.testing.expect(ctx.hash(v1) != ctx.hash(v3));
+    try std.testing.expect(ctx.eql(v1, v2));
+    try std.testing.expect(!ctx.eql(v1, v3));
+}
+
+test "context with sequences" {
+    const gpa = std.testing.allocator;
+
+    var v1: Value = try .allocSequence(gpa, &.{ try .allocString(gpa, "foo"), try .allocString(gpa, "bar") });
+    defer v1.deinit(gpa);
+    var v2: Value = try .allocSequence(gpa, &.{ try .allocString(gpa, "foo"), try .allocString(gpa, "bar") });
+    defer v2.deinit(gpa);
+    var v3: Value = try .allocSequence(gpa, &.{ try .allocString(gpa, "foo"), try .allocString(gpa, "baz") });
+    defer v3.deinit(gpa);
+
+    const ctx: Context = .{};
+    try std.testing.expectEqual(ctx.hash(v1), ctx.hash(v2));
+    try std.testing.expect(ctx.hash(v1) != ctx.hash(v3));
+    try std.testing.expect(ctx.eql(v1, v2));
+    try std.testing.expect(!ctx.eql(v1, v3));
+}
+
+test "context with mappings" {
+    const gpa = std.testing.allocator;
+
+    var v1: Value = try .allocMapping(gpa, &.{.{ try Value.allocString(gpa, "foo"), try Value.allocString(gpa, "bar") }});
+    defer v1.deinit(gpa);
+    var v2: Value = try .allocMapping(gpa, &.{.{ try Value.allocString(gpa, "foo"), try Value.allocString(gpa, "bar") }});
+    defer v2.deinit(gpa);
+    var v3: Value = try .allocMapping(gpa, &.{.{ try Value.allocString(gpa, "foo"), try Value.allocString(gpa, "baz") }});
+    defer v3.deinit(gpa);
+
+    const ctx: Context = .{};
+    try std.testing.expectEqual(ctx.hash(v1), ctx.hash(v2));
+    try std.testing.expect(ctx.hash(v1) != ctx.hash(v3));
+    try std.testing.expect(ctx.eql(v1, v2));
+    try std.testing.expect(!ctx.eql(v1, v3));
+}
+
+test "context with different types" {
+    const gpa = std.testing.allocator;
+
+    var v1: Value = try .allocString(gpa, "foo");
+    defer v1.deinit(gpa);
+    var v2: Value = try .allocSequence(gpa, &.{try .allocString(gpa, "foo")});
+    defer v2.deinit(gpa);
+    var v3: Value = try .allocMapping(gpa, &.{.{ try Value.allocString(gpa, "foo"), try Value.allocString(gpa, "") }});
+    defer v3.deinit(gpa);
+
+    const ctx: Context = .{};
+    try std.testing.expect(ctx.hash(v1) != ctx.hash(v2));
+    try std.testing.expect(ctx.hash(v1) != ctx.hash(v3));
+    try std.testing.expect(ctx.hash(v2) != ctx.hash(v3));
+    try std.testing.expect(!ctx.eql(v1, v2));
+    try std.testing.expect(!ctx.eql(v1, v3));
+    try std.testing.expect(!ctx.eql(v2, v3));
 }
