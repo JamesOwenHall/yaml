@@ -1,5 +1,6 @@
 const std = @import("std");
 const clibyaml = @import("clibyaml");
+const Context = @import("Context.zig");
 const Error = @import("../error.zig").Error;
 const EventIterator = @import("../EventIterator.zig");
 const Value = @import("value.zig").Value;
@@ -175,7 +176,7 @@ test "parse scalar" {
     var expected: Value = try .allocString(gpa, "foo");
     defer expected.deinit(gpa);
 
-    const ctx: Value.Context = .{};
+    const ctx: Context = .{};
     try std.testing.expect(ctx.eql(expected, actual));
 }
 
@@ -201,7 +202,7 @@ test "parse sequences" {
     });
     defer expected.deinit(gpa);
 
-    const ctx: Value.Context = .{};
+    const ctx: Context = .{};
     try std.testing.expect(ctx.eql(expected, actual));
 }
 
@@ -225,7 +226,7 @@ test "parse mappings" {
     });
     defer expected.deinit(gpa);
 
-    const ctx: Value.Context = .{};
+    const ctx: Context = .{};
     try std.testing.expect(ctx.eql(expected, actual));
 }
 
@@ -249,6 +250,6 @@ test "parse complex keys" {
     });
     defer expected.deinit(gpa);
 
-    const ctx: Value.Context = .{};
+    const ctx: Context = .{};
     try std.testing.expect(ctx.eql(expected, actual));
 }
